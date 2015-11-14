@@ -1,8 +1,7 @@
 -- | A basic wrapper for the `webidl2` library, and some ADT sugar on top.
 
 module WebIDL
-  ( Node()
-  , NodeView(..)
+  ( NodeView(..)
   , Type(..)
   , parse
   , toView
@@ -12,13 +11,18 @@ module WebIDL
 import Prelude
 
 import Data.Maybe
+import Data.Either
 import Data.Generic
+import Data.Foreign
+import Data.Foreign.Class
+import Data.Foreign.NullOrUndefined
 
--- | A raw node, representing the output from the `webidl2` library.
-foreign import data Node :: *
+import Control.Alt ((<|>))
+
+import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 -- | Parse a WebIDL string. This function can throw exceptions.
-foreign import parse :: String -> Node
+foreign import parse :: String -> Foreign
 
 newtype Type = Type
   { idlType   :: String
@@ -81,9 +85,29 @@ instance showNodeView :: (Generic node) => Show (NodeView node) where
   show = gShow
 
 -- | Unwrap the top level of a node.
-toView :: Node -> NodeView Node
+toView :: Foreign -> NodeView Foreign
 toView = toViewWith id
 
 -- | Unwrap the top level of a node.
-toViewWith :: forall node. (Node -> node) -> Node -> NodeView node
-toViewWith n = toViewWith n
+toViewWith :: forall node. (Foreign -> node) -> Foreign -> NodeView node
+toViewWith fromForeign = fromRight <<< readView <<< toForeign
+  where
+  readView :: Foreign -> F (NodeView node)
+  readView f =
+    InterfaceNode <$> readInterfaceNode f
+    <|> pure OtherNode
+
+  readInterfaceNode :: Foreign -> F { inheritance :: Maybe String
+                                    , members :: Array node
+                                    , partial :: Boolean
+                                    , name :: String
+                                    }
+  readInterfaceNode f = do
+    name <- readProp "name" f
+    partial <- readProp "partial" f
+    members <- map fromForeign <$> readProp "members" f
+    inheritance <- runNullOrUndefined <$> readProp "inheritance" f
+    return { name, partial, members, inheritance }
+
+  fromRight (Right view) = view
+  fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
