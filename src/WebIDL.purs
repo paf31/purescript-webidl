@@ -17,8 +17,6 @@ import Data.Foreign
 import Data.Foreign.Class
 import Data.Foreign.NullOrUndefined
 
-import Control.Alt ((<|>))
-
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 -- | Parse a WebIDL string. This function can throw exceptions.
@@ -93,9 +91,11 @@ toViewWith :: forall node. (Foreign -> node) -> Foreign -> NodeView node
 toViewWith fromForeign = fromRight <<< readView <<< toForeign
   where
   readView :: Foreign -> F (NodeView node)
-  readView f =
-    InterfaceNode <$> readInterfaceNode f
-    <|> pure OtherNode
+  readView f = do
+    _type <- readProp "type" f
+    case _type of
+      "interface" -> InterfaceNode <$> readInterfaceNode f
+      _ -> pure OtherNode
 
   readInterfaceNode :: Foreign -> F { inheritance :: Maybe String
                                     , members :: Array node
