@@ -94,20 +94,16 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
   readView f = do
     _type <- readProp "type" f
     case _type of
-      "interface" -> InterfaceNode <$> readInterfaceNode f
+      "interface" -> readInterfaceNode f
       _ -> pure OtherNode
 
-  readInterfaceNode :: Foreign -> F { inheritance :: Maybe String
-                                    , members :: Array node
-                                    , partial :: Boolean
-                                    , name :: String
-                                    }
+  readInterfaceNode :: Foreign -> F (NodeView node)
   readInterfaceNode f = do
     name <- readProp "name" f
     partial <- readProp "partial" f
     members <- map fromForeign <$> readProp "members" f
     inheritance <- runNullOrUndefined <$> readProp "inheritance" f
-    return { name, partial, members, inheritance }
+    return $ InterfaceNode { name, partial, members, inheritance }
 
   fromRight (Right view) = view
   fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
