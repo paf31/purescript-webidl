@@ -1,0 +1,17 @@
+{
+  "name": "purescript-dom-generator",
+  "version": "1.0.0",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-foreign": "~0.7.1",
+    "purescript-maybe": "~0.3.4"
+  }
+}
