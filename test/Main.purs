@@ -1,11 +1,15 @@
 module Test.Main where
 
 import Prelude
-import Data.Generic
+
+import Data.Traversable (traverse)
+
 import Control.Monad.Eff
-import Control.Monad.Eff.Console (CONSOLE(), print)
+import Control.Monad.Eff.Console (CONSOLE(), log)
 import Control.Monad.Eff.Exception (EXCEPTION())
+
 import WebIDL
+import WebIDL.ToPureScript
 
 idl :: String
 idl = """
@@ -15,6 +19,7 @@ idl = """
   """
 
 main :: forall eff. Eff (console :: CONSOLE, err :: EXCEPTION | eff) Unit
-main = do
+main = void do
   nodes <- parse idl
-  print nodes
+  let code = toPureScript nodes
+  traverse log code
