@@ -16,5 +16,5 @@ idl = """
 main :: forall eff. Eff (console :: CONSOLE | eff) Unit
 main = do
   let node = parse idl
-      view = map readFully node
+      view = map toNode node
   print view

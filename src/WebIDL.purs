@@ -1,15 +1,12 @@
 -- | A basic wrapper for the `webidl2` library, and some ADT sugar on top.
 
 module WebIDL
-  ( NodeView(..)
+  ( Node(..)
+  , Member(..)
   , Type(..)
   , Argument(..)
   , parse
-  , toView
-  , toViewWith
-  , Fix(..)
-  , unFix
-  , readFully
+  , toNode
   ) where
 
 import Prelude
@@ -74,24 +71,8 @@ derive instance genericArgument :: Generic Argument
 instance showArgument :: Show Argument where
   show = gShow
 
--- | A node represented as a PureScript data type.
-data NodeView node
-  = InterfaceNode
-    { name        :: String
-    , partial     :: Boolean
-    , members     :: Array node
-    , inheritance :: Maybe String
-    }
-  | ImplementsNode
-    { target      :: String
-    , implements  :: String
-    }
-  | TypeDefNode
-  | CallbackNode
-  | DictionaryNode
-  | ExceptionNode
-  | EnumNode
-  | OperationMember
+data Member
+  = OperationMember
     { name            :: Maybe String
     , arguments       :: Array Argument
     , getter          :: Boolean
@@ -112,47 +93,26 @@ data NodeView node
     , idlType         :: Type
     }
   | ConstantMember
-  | SerializerMember
-  | IteratorMember
-  | OtherNode String
+    { name            :: String
+    , idlType         :: String
+    , nullable        :: Boolean
+    }
+  | FieldMember
+    { name            :: String
+    , required        :: Boolean
+    , idlType         :: Type
+    }
+  | OtherMember String
 
-derive instance genericNodeView :: (Generic node) => Generic (NodeView node)
+derive instance genericMember :: Generic Member
 
-instance showNodeView :: (Generic node) => Show (NodeView node) where
+instance showMember :: Show Member where
   show = gShow
 
--- | Unwrap the top level of a node.
-toView :: Foreign -> NodeView Foreign
-toView = toViewWith id
-
--- | Unwrap the top level of a node.
-toViewWith :: forall node. (Foreign -> node) -> Foreign -> NodeView node
-toViewWith fromForeign = fromRight <<< readView <<< toForeign
-  where
-  readView :: Foreign -> F (NodeView node)
-  readView f = do
+instance isForeignMember :: IsForeign Member where
+  read f = do
     _type <- readProp "type" f
     case _type of
-      "interface" -> do
-        name          <- readProp "name" f
-        partial       <- readProp "partial" f
-        members       <- map fromForeign <$> readProp "members" f
-        inheritance   <- runNullOrUndefined <$> readProp "inheritance" f
-        return $ InterfaceNode { name, partial, members, inheritance }
-      "implements" -> do
-        target        <- readProp "target" f
-        implements    <- readProp "implements" f
-        return $ ImplementsNode { target, implements }
-      "typedef" -> do
-        return $ TypeDefNode
-      "callback" -> do
-        return $ CallbackNode
-      "dictionary" -> do
-        return $ DictionaryNode
-      "exception" -> do
-        return $ ExceptionNode
-      "enum" -> do
-        return $ EnumNode
       "operation" -> do
         name          <- runNullOrUndefined <$> readProp "name" f
         arguments     <- readProp "arguments" f
@@ -166,7 +126,10 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
         stringifier   <- readProp "stringifier" f
         return $ OperationMember { name, arguments, idlType, getter, setter, creator, deleter, legacycaller, static, stringifier }
       "const" -> do
-        return ConstantMember
+        name          <- readProp "name" f
+        idlType       <- readProp "idlType" f
+        nullable      <- readProp "nullable" f
+        return $ ConstantMember { name, idlType, nullable }
       "attribute" -> do
         name          <- readProp "name" f
         inherit       <- readProp "inherit" f
@@ -175,26 +138,99 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
         readonly      <- readProp "readonly" f
         idlType       <- readProp "idlType" f
         return $ AttributeMember { name, inherit, static, stringifier, readonly, idlType }
-      "serializer" -> do
-        return SerializerMember
-      "iterator" -> do
-        return IteratorMember
-      _ -> return $ OtherNode _type
+      "field" -> do
+        name          <- readProp "name" f
+        idlType       <- readProp "idlType" f
+        required      <- readProp "required" f
+        return $ FieldMember { name, idlType, required }
+      _ -> return $ OtherMember _type
 
-  fromRight (Right view) = view
-  fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
+-- | A node represented as a PureScript data type.
+data Node
+  = InterfaceNode
+    { name            :: String
+    , partial         :: Boolean
+    , members         :: Array Member
+    , inheritance     :: Maybe String
+    }
+  | ImplementsNode
+    { target          :: String
+    , implements      :: String
+    }
+  | TypeDefNode
+    { name            :: String
+    , idlType         :: Type
+    }
+  | CallbackNode
+    { name            :: String
+    , idlType         :: Type
+    , arguments       :: Array Argument
+    }
+  | DictionaryNode
+    { name            :: String
+    , partial         :: Boolean
+    , members         :: Array Member
+    , inheritance     :: Maybe String
+    }
+  | ExceptionNode
+    { name            :: String
+    , members         :: Array Member
+    , inheritance     :: Maybe String
+    }
+  | EnumNode
+    { name            :: String
+    , values          :: Array String
+    }
+  | OtherNode String
 
--- | Fixed point of the `NodeView` type constructor.
-newtype Fix = Fix (NodeView Fix)
+derive instance genericNode :: Generic Node
 
-unFix :: Fix -> NodeView Fix
-unFix (Fix view) = view
-
-derive instance genericFix :: Generic Fix
-
-instance showFix :: Show Fix where
+instance showNode :: Show Node where
   show = gShow
 
--- | Read every layer of a node.
-readFully :: Foreign -> Fix
-readFully f = Fix (toViewWith readFully f)
+instance isForeignNode :: IsForeign Node where
+  read f = do
+    _type <- readProp "type" f
+    case _type of
+      "interface" -> do
+        name          <- readProp "name" f
+        partial       <- readProp "partial" f
+        members       <- readProp "members" f
+        inheritance   <- runNullOrUndefined <$> readProp "inheritance" f
+        return $ InterfaceNode { name, partial, members, inheritance }
+      "implements" -> do
+        target        <- readProp "target" f
+        implements    <- readProp "implements" f
+        return $ ImplementsNode { target, implements }
+      "typedef" -> do
+        name          <- readProp "name" f
+        idlType       <- readProp "idlType" f
+        return $ TypeDefNode { name, idlType }
+      "callback" -> do
+        name          <- readProp "name" f
+        idlType       <- readProp "idlType" f
+        arguments     <- readProp "arguments" f
+        return $ CallbackNode { name, idlType, arguments }
+      "dictionary" -> do
+        name          <- readProp "name" f
+        partial       <- readProp "partial" f
+        members       <- readProp "members" f
+        inheritance   <- runNullOrUndefined <$> readProp "inheritance" f
+        return $ DictionaryNode { name, partial, members, inheritance }
+      "exception" -> do
+        name          <- readProp "name" f
+        members       <- readProp "members" f
+        inheritance   <- runNullOrUndefined <$> readProp "inheritance" f
+        return $ ExceptionNode { name, members, inheritance }
+      "enum" -> do
+        name          <- readProp "name" f
+        values        <- readProp "values" f
+        return $ EnumNode { name, values }
+      _ -> return $ OtherNode _type
+
+-- | Unwrap the top level of a node.
+toNode :: Foreign -> Node
+toNode = fromRight <<< read <<< toForeign
+  where
+  fromRight (Right view) = view
+  fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err

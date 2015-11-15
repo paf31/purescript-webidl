@@ -42,22 +42,35 @@ Generic Argument
 Show Argument
 ```
 
-#### `NodeView`
+#### `Member`
 
 ``` purescript
-data NodeView node
-  = InterfaceNode { name :: String, partial :: Boolean, members :: Array node, inheritance :: Maybe String }
-  | ImplementsNode { target :: String, implements :: String }
-  | TypeDefNode
-  | CallbackNode
-  | DictionaryNode
-  | ExceptionNode
-  | EnumNode
-  | OperationMember { name :: Maybe String, arguments :: Array Argument, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean, idlType :: Type }
+data Member
+  = OperationMember { name :: Maybe String, arguments :: Array Argument, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean, idlType :: Type }
   | AttributeMember { name :: String, inherit :: Boolean, static :: Boolean, stringifier :: Boolean, readonly :: Boolean, idlType :: Type }
-  | ConstantMember
-  | SerializerMember
-  | IteratorMember
+  | ConstantMember { name :: String, idlType :: String, nullable :: Boolean }
+  | FieldMember { name :: String, required :: Boolean, idlType :: Type }
+  | OtherMember String
+```
+
+##### Instances
+``` purescript
+Generic Member
+Show Member
+IsForeign Member
+```
+
+#### `Node`
+
+``` purescript
+data Node
+  = InterfaceNode { name :: String, partial :: Boolean, members :: Array Member, inheritance :: Maybe String }
+  | ImplementsNode { target :: String, implements :: String }
+  | TypeDefNode { name :: String, idlType :: Type }
+  | CallbackNode { name :: String, idlType :: Type, arguments :: Array Argument }
+  | DictionaryNode { name :: String, partial :: Boolean, members :: Array Member, inheritance :: Maybe String }
+  | ExceptionNode { name :: String, members :: Array Member, inheritance :: Maybe String }
+  | EnumNode { name :: String, values :: Array String }
   | OtherNode String
 ```
 
@@ -65,53 +78,17 @@ A node represented as a PureScript data type.
 
 ##### Instances
 ``` purescript
-(Generic node) => Generic (NodeView node)
-(Generic node) => Show (NodeView node)
+Generic Node
+Show Node
+IsForeign Node
 ```
 
-#### `toView`
+#### `toNode`
 
 ``` purescript
-toView :: Foreign -> NodeView Foreign
+toNode :: Foreign -> Node
 ```
 
 Unwrap the top level of a node.
-
-#### `toViewWith`
-
-``` purescript
-toViewWith :: forall node. (Foreign -> node) -> Foreign -> NodeView node
-```
-
-Unwrap the top level of a node.
-
-#### `Fix`
-
-``` purescript
-newtype Fix
-  = Fix (NodeView Fix)
-```
-
-Fixed point of the `NodeView` type constructor.
-
-##### Instances
-``` purescript
-Generic Fix
-Show Fix
-```
-
-#### `unFix`
-
-``` purescript
-unFix :: Fix -> NodeView Fix
-```
-
-#### `readFully`
-
-``` purescript
-readFully :: Foreign -> Fix
-```
-
-Read every layer of a node.
 
 
