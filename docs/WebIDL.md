@@ -2,18 +2,10 @@
 
 A basic wrapper for the `webidl2` library, and some ADT sugar on top.
 
-#### `Node`
-
-``` purescript
-data Node :: *
-```
-
-A raw node, representing the output from the `webidl2` library.
-
 #### `parse`
 
 ``` purescript
-parse :: String -> Node
+parse :: String -> Array Foreign
 ```
 
 Parse a WebIDL string. This function can throw exceptions.
@@ -22,13 +14,28 @@ Parse a WebIDL string. This function can throw exceptions.
 
 ``` purescript
 newtype Type
-  = Type { idlType :: String, sequence :: Boolean, generic :: Maybe String, nullable :: Boolean, array :: Boolean, union :: Boolean }
+  = Type { sequence :: Boolean, generic :: Maybe String, nullable :: Boolean, array :: Boolean, union :: Boolean }
 ```
 
 ##### Instances
 ``` purescript
-instance genericType :: Generic Type
-instance showType :: Show Type
+IsForeign Type
+Generic Type
+Show Type
+```
+
+#### `Argument`
+
+``` purescript
+newtype Argument
+  = Argument { name :: String, idlType :: Type, optional :: Boolean, variadic :: Boolean }
+```
+
+##### Instances
+``` purescript
+IsForeign Argument
+Generic Argument
+Show Argument
 ```
 
 #### `NodeView`
@@ -41,26 +48,26 @@ data NodeView node
   | CallbackNode
   | DictionaryNode
   | ExceptionNode
-  | OperationMember { name :: String, arguments :: Array node, idlType :: Type, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean }
-  | ArgumentMember { name :: String, idlType :: Type, static :: Boolean, stringifier :: Boolean, inherit :: Boolean, readonly :: Boolean }
+  | EnumNode
+  | OperationMember { name :: Maybe String, arguments :: Array Argument, idlType :: Type, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean }
   | ConstantMember
   | SerializerMember
   | IteratorMember
-  | OtherNode
+  | OtherNode String
 ```
 
 A node represented as a PureScript data type.
 
 ##### Instances
 ``` purescript
-instance genericNodeView :: (Generic node) => Generic (NodeView node)
-instance showNodeView :: (Generic node) => Show (NodeView node)
+(Generic node) => Generic (NodeView node)
+(Generic node) => Show (NodeView node)
 ```
 
 #### `toView`
 
 ``` purescript
-toView :: Node -> NodeView Node
+toView :: Foreign -> NodeView Foreign
 ```
 
 Unwrap the top level of a node.
@@ -68,9 +75,38 @@ Unwrap the top level of a node.
 #### `toViewWith`
 
 ``` purescript
-toViewWith :: forall node. (Node -> node) -> Node -> NodeView node
+toViewWith :: forall node. (Foreign -> node) -> Foreign -> NodeView node
 ```
 
 Unwrap the top level of a node.
+
+#### `Fix`
+
+``` purescript
+newtype Fix
+  = Fix (NodeView Fix)
+```
+
+Fixed point of the `NodeView` type constructor.
+
+##### Instances
+``` purescript
+Generic Fix
+Show Fix
+```
+
+#### `unFix`
+
+``` purescript
+unFix :: Fix -> NodeView Fix
+```
+
+#### `readFully`
+
+``` purescript
+readFully :: Foreign -> Fix
+```
+
+Read every layer of a node.
 
 

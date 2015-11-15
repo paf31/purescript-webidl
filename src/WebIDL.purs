@@ -3,9 +3,13 @@
 module WebIDL
   ( NodeView(..)
   , Type(..)
+  , Argument(..)
   , parse
   , toView
   , toViewWith
+  , Fix(..)
+  , unFix
+  , readFully
   ) where
 
 import Prelude
@@ -20,11 +24,10 @@ import Data.Foreign.NullOrUndefined
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 -- | Parse a WebIDL string. This function can throw exceptions.
-foreign import parse :: String -> Foreign
+foreign import parse :: String -> Array Foreign
 
 newtype Type = Type
-  { idlType   :: String
-  , sequence  :: Boolean
+  { sequence  :: Boolean
   , generic   :: Maybe String
   , nullable  :: Boolean
   , array     :: Boolean
@@ -33,17 +36,36 @@ newtype Type = Type
 
 instance isForeignType :: IsForeign Type where
   read f = do
-    idlType   <- readProp "idlType" f
     sequence  <- readProp "sequence" f
     generic   <- runNullOrUndefined <$> readProp "generic" f
     nullable  <- readProp "nullable" f
     array     <- readProp "array" f
     union     <- readProp "union" f
-    return $ Type { idlType, sequence, generic, nullable, array, union }
+    return $ Type { sequence, generic, nullable, array, union }
 
 derive instance genericType :: Generic Type
 
 instance showType :: Show Type where
+  show = gShow
+
+newtype Argument = Argument
+  { name           :: String
+  , idlType        :: Type
+  , optional       :: Boolean
+  , variadic       :: Boolean
+  }
+
+instance isForeignArgument :: IsForeign Argument where
+  read f = do
+    name          <- readProp "name" f
+    idlType       <- readProp "idlType" f
+    optional      <- readProp "optional" f
+    variadic      <- readProp "variadic" f
+    return $ Argument { name, idlType, optional, variadic }
+
+derive instance genericArgument :: Generic Argument
+
+instance showArgument :: Show Argument where
   show = gShow
 
 -- | A node represented as a PureScript data type.
@@ -62,9 +84,10 @@ data NodeView node
   | CallbackNode
   | DictionaryNode
   | ExceptionNode
+  | EnumNode
   | OperationMember
-    { name            :: String
-    , arguments       :: Array node
+    { name            :: Maybe String
+    , arguments       :: Array Argument
     , idlType         :: Type
     , getter          :: Boolean
     , setter          :: Boolean
@@ -73,14 +96,6 @@ data NodeView node
     , legacycaller    :: Boolean
     , static          :: Boolean
     , stringifier     :: Boolean
-    }
-  | ArgumentMember
-    { name           :: String
-    , idlType        :: Type
-    , static         :: Boolean
-    , stringifier    :: Boolean
-    , inherit        :: Boolean
-    , readonly       :: Boolean
     }
   | ConstantMember
   | SerializerMember
@@ -122,9 +137,11 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
         return $ DictionaryNode
       "exception" -> do
         return $ ExceptionNode
+      "enum" -> do
+        return $ EnumNode
       "operation" -> do
-        name          <- readProp "name" f
-        arguments     <- map fromForeign <$> readProp "arguments" f
+        name          <- runNullOrUndefined <$> readProp "name" f
+        arguments     <- readProp "arguments" f
         idlType       <- readProp "idlType" f
         getter        <- readProp "getter" f
         setter        <- readProp "setter" f
@@ -134,14 +151,6 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
         static        <- readProp "static" f
         stringifier   <- readProp "stringifier" f
         return $ OperationMember { name, arguments, idlType, getter, setter, creator, deleter, legacycaller, static, stringifier }
-      "argument" -> do
-        name          <- readProp "name" f
-        idlType       <- readProp "idlType" f
-        static        <- readProp "static" f
-        stringifier   <- readProp "stringifier" f
-        inherit       <- readProp "inherit" f
-        readonly      <- readProp "readonly" f
-        return $ ArgumentMember { name, idlType, static, stringifier, inherit, readonly }
       "constant" -> do
         return ConstantMember
       "serializer" -> do
@@ -152,3 +161,18 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
 
   fromRight (Right view) = view
   fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
+
+-- | Fixed point of the `NodeView` type constructor.
+newtype Fix = Fix (NodeView Fix)
+
+unFix :: Fix -> NodeView Fix
+unFix (Fix view) = view
+
+derive instance genericFix :: Generic Fix
+
+instance showFix :: Show Fix where
+  show = gShow
+
+-- | Read every layer of a node.
+readFully :: Foreign -> Fix
+readFully f = Fix (toViewWith readFully f)
