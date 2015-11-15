@@ -21,27 +21,33 @@ import Data.Foreign
 import Data.Foreign.Class
 import Data.Foreign.NullOrUndefined
 
+import Control.Alt ((<|>))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 -- | Parse a WebIDL string. This function can throw exceptions.
 foreign import parse :: String -> Array Foreign
 
-newtype Type = Type
-  { sequence  :: Boolean
-  , generic   :: Maybe String
-  , nullable  :: Boolean
-  , array     :: Boolean
-  , union     :: Boolean
-  }
+data Type
+  = UnionType { unifies :: Array Type }
+  | ArrayType { nesting :: Int, elementType :: String }
+  | NamedType { typeName :: String }
+  | GenericType { family :: String, typeArgument :: Type }
+  | NullableType Type
 
 instance isForeignType :: IsForeign Type where
   read f = do
-    sequence  <- readProp "sequence" f
-    generic   <- runNullOrUndefined <$> readProp "generic" f
-    nullable  <- readProp "nullable" f
-    array     <- readProp "array" f
-    union     <- readProp "union" f
-    return $ Type { sequence, generic, nullable, array, union }
+    nullable <- readProp "nullable" f
+    ty <- do family <- readProp "generic" f
+             typeArgument <- readProp "idlType" f
+             return $ GenericType { family, typeArgument }
+      <|> do nesting <- readProp "array" f
+             elementType <- readProp "idlType" f
+             return $ ArrayType { nesting, elementType }
+      <|> do unifies <- readProp "idlType" f
+             return $ UnionType { unifies }
+      <|> do typeName <- readProp "idlType" f
+             return $ NamedType { typeName }
+    return $ if nullable then NullableType ty else ty
 
 derive instance genericType :: Generic Type
 
@@ -88,7 +94,6 @@ data NodeView node
   | OperationMember
     { name            :: Maybe String
     , arguments       :: Array Argument
-    , idlType         :: Type
     , getter          :: Boolean
     , setter          :: Boolean
     , creator         :: Boolean
@@ -96,6 +101,15 @@ data NodeView node
     , legacycaller    :: Boolean
     , static          :: Boolean
     , stringifier     :: Boolean
+    , idlType         :: Type
+    }
+  | AttributeMember
+    { name            :: String
+    , inherit         :: Boolean
+    , static          :: Boolean
+    , stringifier     :: Boolean
+    , readonly        :: Boolean
+    , idlType         :: Type
     }
   | ConstantMember
   | SerializerMember
@@ -151,8 +165,16 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
         static        <- readProp "static" f
         stringifier   <- readProp "stringifier" f
         return $ OperationMember { name, arguments, idlType, getter, setter, creator, deleter, legacycaller, static, stringifier }
-      "constant" -> do
+      "const" -> do
         return ConstantMember
+      "attribute" -> do
+        name          <- readProp "name" f
+        inherit       <- readProp "inherit" f
+        static        <- readProp "static" f
+        stringifier   <- readProp "stringifier" f
+        readonly      <- readProp "readonly" f
+        idlType       <- readProp "idlType" f
+        return $ AttributeMember { name, inherit, static, stringifier, readonly, idlType }
       "serializer" -> do
         return SerializerMember
       "iterator" -> do

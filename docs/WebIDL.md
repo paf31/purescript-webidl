@@ -13,8 +13,12 @@ Parse a WebIDL string. This function can throw exceptions.
 #### `Type`
 
 ``` purescript
-newtype Type
-  = Type { sequence :: Boolean, generic :: Maybe String, nullable :: Boolean, array :: Boolean, union :: Boolean }
+data Type
+  = UnionType { unifies :: Array Type }
+  | ArrayType { nesting :: Int, elementType :: String }
+  | NamedType { typeName :: String }
+  | GenericType { family :: String, typeArgument :: Type }
+  | NullableType Type
 ```
 
 ##### Instances
@@ -49,7 +53,8 @@ data NodeView node
   | DictionaryNode
   | ExceptionNode
   | EnumNode
-  | OperationMember { name :: Maybe String, arguments :: Array Argument, idlType :: Type, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean }
+  | OperationMember { name :: Maybe String, arguments :: Array Argument, getter :: Boolean, setter :: Boolean, creator :: Boolean, deleter :: Boolean, legacycaller :: Boolean, static :: Boolean, stringifier :: Boolean, idlType :: Type }
+  | AttributeMember { name :: String, inherit :: Boolean, static :: Boolean, stringifier :: Boolean, readonly :: Boolean, idlType :: Type }
   | ConstantMember
   | SerializerMember
   | IteratorMember
