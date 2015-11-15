@@ -2,14 +2,6 @@
 
 A basic wrapper for the `webidl2` library, and some ADT sugar on top.
 
-#### `parse`
-
-``` purescript
-parse :: String -> Array Foreign
-```
-
-Parse a WebIDL string. This function can throw exceptions.
-
 #### `Type`
 
 ``` purescript
@@ -83,12 +75,12 @@ Show Node
 IsForeign Node
 ```
 
-#### `toNode`
+#### `parse`
 
 ``` purescript
-toNode :: Foreign -> Node
+parse :: forall eff. String -> Eff (err :: EXCEPTION | eff) (Array Node)
 ```
 
-Unwrap the top level of a node.
+Parse a WebIDL string.
 
 

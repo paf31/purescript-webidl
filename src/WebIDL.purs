@@ -6,7 +6,6 @@ module WebIDL
   , Type(..)
   , Argument(..)
   , parse
-  , toNode
   ) where
 
 import Prelude
@@ -17,12 +16,12 @@ import Data.Generic
 import Data.Foreign
 import Data.Foreign.Class
 import Data.Foreign.NullOrUndefined
+import Data.Traversable (traverse)
 
 import Control.Alt ((<|>))
-import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-
--- | Parse a WebIDL string. This function can throw exceptions.
-foreign import parse :: String -> Array Foreign
+import Control.Bind ((>=>))
+import Control.Monad.Eff
+import Control.Monad.Eff.Exception (EXCEPTION(), error, throwException)
 
 data Type
   = UnionType { unifies :: Array Type }
@@ -228,9 +227,12 @@ instance isForeignNode :: IsForeign Node where
         return $ EnumNode { name, values }
       _ -> return $ OtherNode _type
 
--- | Unwrap the top level of a node.
-toNode :: Foreign -> Node
-toNode = fromRight <<< read <<< toForeign
+foreign import parseImpl :: forall eff. String -> Eff (err :: EXCEPTION | eff) (Array Foreign)
+
+-- | Parse a WebIDL string.
+parse :: forall eff. String -> Eff (err :: EXCEPTION | eff) (Array Node)
+parse = parseImpl >=> traverse (fromRight <<< read <<< toForeign)
   where
-  fromRight (Right view) = view
-  fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
+  fromRight :: Either ForeignError Node -> Eff (err :: EXCEPTION | eff) Node
+  fromRight (Right node) = return node
+  fromRight (Left err) = throwException $ error $ "Unable to parse node: " <> show err

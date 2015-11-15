@@ -2,7 +2,8 @@
 
 // module WebIDL
 
-exports.parse = function(s) {
-
-    return require('webidl2').parse(s);
+exports.parseImpl = function(s) {
+    return function() {
+        return require('webidl2').parse(s);
+    };
 };

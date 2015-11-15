@@ -3,7 +3,8 @@ module Test.Main where
 import Prelude
 import Data.Generic
 import Control.Monad.Eff
-import Control.Monad.Eff.Console
+import Control.Monad.Eff.Console (CONSOLE(), print)
+import Control.Monad.Eff.Exception (EXCEPTION())
 import WebIDL
 
 idl :: String
@@ -13,8 +14,7 @@ idl = """
   };
   """
 
-main :: forall eff. Eff (console :: CONSOLE | eff) Unit
+main :: forall eff. Eff (console :: CONSOLE, err :: EXCEPTION | eff) Unit
 main = do
-  let node = parse idl
-      view = map toNode node
-  print view
+  nodes <- parse idl
+  print nodes
