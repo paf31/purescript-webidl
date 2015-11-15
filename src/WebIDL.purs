@@ -31,6 +31,16 @@ newtype Type = Type
   , union     :: Boolean
   }
 
+instance isForeignType :: IsForeign Type where
+  read f = do
+    idlType   <- readProp "idlType" f
+    sequence  <- readProp "sequence" f
+    generic   <- runNullOrUndefined <$> readProp "generic" f
+    nullable  <- readProp "nullable" f
+    array     <- readProp "array" f
+    union     <- readProp "union" f
+    return $ Type { idlType, sequence, generic, nullable, array, union }
+
 derive instance genericType :: Generic Type
 
 instance showType :: Show Type where
@@ -75,7 +85,7 @@ data NodeView node
   | ConstantMember
   | SerializerMember
   | IteratorMember
-  | OtherNode
+  | OtherNode String
 
 derive instance genericNodeView :: (Generic node) => Generic (NodeView node)
 
@@ -94,16 +104,51 @@ toViewWith fromForeign = fromRight <<< readView <<< toForeign
   readView f = do
     _type <- readProp "type" f
     case _type of
-      "interface" -> readInterfaceNode f
-      _ -> pure OtherNode
-
-  readInterfaceNode :: Foreign -> F (NodeView node)
-  readInterfaceNode f = do
-    name <- readProp "name" f
-    partial <- readProp "partial" f
-    members <- map fromForeign <$> readProp "members" f
-    inheritance <- runNullOrUndefined <$> readProp "inheritance" f
-    return $ InterfaceNode { name, partial, members, inheritance }
+      "interface" -> do
+        name          <- readProp "name" f
+        partial       <- readProp "partial" f
+        members       <- map fromForeign <$> readProp "members" f
+        inheritance   <- runNullOrUndefined <$> readProp "inheritance" f
+        return $ InterfaceNode { name, partial, members, inheritance }
+      "implements" -> do
+        target        <- readProp "target" f
+        implements    <- readProp "implements" f
+        return $ ImplementsNode { target, implements }
+      "typedef" -> do
+        return $ TypeDefNode
+      "callback" -> do
+        return $ CallbackNode
+      "dictionary" -> do
+        return $ DictionaryNode
+      "exception" -> do
+        return $ ExceptionNode
+      "operation" -> do
+        name          <- readProp "name" f
+        arguments     <- map fromForeign <$> readProp "arguments" f
+        idlType       <- readProp "idlType" f
+        getter        <- readProp "getter" f
+        setter        <- readProp "setter" f
+        creator       <- readProp "creator" f
+        deleter       <- readProp "deleter" f
+        legacycaller  <- readProp "legacycaller" f
+        static        <- readProp "static" f
+        stringifier   <- readProp "stringifier" f
+        return $ OperationMember { name, arguments, idlType, getter, setter, creator, deleter, legacycaller, static, stringifier }
+      "argument" -> do
+        name          <- readProp "name" f
+        idlType       <- readProp "idlType" f
+        static        <- readProp "static" f
+        stringifier   <- readProp "stringifier" f
+        inherit       <- readProp "inherit" f
+        readonly      <- readProp "readonly" f
+        return $ ArgumentMember { name, idlType, static, stringifier, inherit, readonly }
+      "constant" -> do
+        return ConstantMember
+      "serializer" -> do
+        return SerializerMember
+      "iterator" -> do
+        return IteratorMember
+      _ -> return $ OtherNode _type
 
   fromRight (Right view) = view
   fromRight (Left err) = unsafeThrow $ "Unable to parse node: " <> show err
