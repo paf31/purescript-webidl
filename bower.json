@@ -1,6 +1,5 @@
 {
-  "name": "purescript-dom-generator",
-  "version": "1.0.0",
+  "name": "purescript-webidl",
   "moduleType": [
     "node"
   ],
