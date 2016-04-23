@@ -12,7 +12,7 @@
   "dependencies": {
     "purescript-exceptions": "~0.3.1",
     "purescript-foreign": "~0.7.1",
-    "purescript-generics": "~0.6.2",
+    "purescript-generics": "~0.7.2",
     "purescript-maybe": "~0.3.4"
   },
   "repository": {
