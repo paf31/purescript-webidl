@@ -18,5 +18,8 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/paf31/purescript-webidl.git"
+  },
+  "devDependencies": {
+    "purescript-console": "^0.1.1"
   }
 }
