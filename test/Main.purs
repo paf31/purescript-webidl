@@ -1,11 +1,10 @@
 module Test.Main where
 
-import Prelude
-import Data.Generic
-import Control.Monad.Eff
-import Control.Monad.Eff.Console (CONSOLE(), print)
-import Control.Monad.Eff.Exception (EXCEPTION())
-import WebIDL
+import Prelude (Unit, bind)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE, print)
+import Control.Monad.Eff.Exception (EXCEPTION)
+import WebIDL (parse)
 
 idl :: String
 idl = """

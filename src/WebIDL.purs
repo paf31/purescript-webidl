@@ -8,19 +8,19 @@ module WebIDL
   , parse
   ) where
 
-import Prelude
+import Prelude (class Show, (<<<), show, (<>), ($), return, bind, (<$>))
 
-import Data.Maybe
-import Data.Either
-import Data.Generic
-import Data.Foreign
-import Data.Foreign.Class
-import Data.Foreign.NullOrUndefined
+import Data.Maybe (Maybe)
+import Data.Either (Either(Left, Right))
+import Data.Generic (class Generic, gShow)
+import Data.Foreign (ForeignError, Foreign, toForeign)
+import Data.Foreign.Class (class IsForeign, read, readProp)
+import Data.Foreign.NullOrUndefined (runNullOrUndefined)
 import Data.Traversable (traverse)
 
 import Control.Alt ((<|>))
 import Control.Bind ((>=>))
-import Control.Monad.Eff
+import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (EXCEPTION(), error, throwException)
 
 data Type
