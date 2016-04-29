@@ -4,6 +4,6 @@
 
 exports.parseImpl = function(s) {
     return function() {
-        return require('webidl2').parse(s);
+        return require('../../bower_components/webidl2').parse(s);
     };
 };
