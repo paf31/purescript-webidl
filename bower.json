@@ -10,16 +10,16 @@
     "output"
   ],
   "dependencies": {
-    "purescript-exceptions": "~0.3.1",
-    "purescript-foreign": "~0.7.1",
-    "purescript-generics": "~0.7.2",
-    "purescript-maybe": "~0.3.4"
+    "purescript-exceptions": "^1.0.0",
+    "purescript-foreign": "^1.0.0",
+    "purescript-generics": "^1.0.0",
+    "purescript-maybe": "^1.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/paf31/purescript-webidl.git"
   },
   "devDependencies": {
-    "purescript-console": "^0.1.1"
+    "purescript-console": "^1.0.0"
   }
 }
