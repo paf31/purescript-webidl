@@ -15,6 +15,7 @@
     "purescript-generics": "^1.0.0",
     "purescript-maybe": "^1.0.0"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git://github.com/paf31/purescript-webidl.git"
