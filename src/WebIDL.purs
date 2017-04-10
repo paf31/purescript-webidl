@@ -196,8 +196,8 @@ readNode f = do
   _type <- readString =<< index f "type"
   case _type of
     "interface" -> do
-      name          <- readString =<< index f "name"
-      partial       <- readBoolean =<< index f "partial"
+      name          <- readString          =<< index f "name"
+      partial       <- readBoolean         =<< index f "partial"
       members       <- traverse readMember =<< readArray =<< index f "members"
       inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
       pure $ InterfaceNode { name, partial, members, inheritance }
@@ -207,26 +207,26 @@ readNode f = do
       pure $ ImplementsNode { target, implements }
     "typedef" -> do
       name          <- readString =<< index f "name"
-      idlType       <- readType =<< index f "idlType"
+      idlType       <- readType   =<< index f "idlType"
       pure $ TypeDefNode { name, idlType }
     "callback" -> do
-      name          <- readString =<< index f "name"
-      idlType       <- readType =<< index f "idlType"
+      name          <- readString            =<< index f "name"
+      idlType       <- readType              =<< index f "idlType"
       arguments     <- traverse readArgument =<< readArray =<< index f "arguments"
       pure $ CallbackNode { name, idlType, arguments }
     "dictionary" -> do
-      name          <- readString =<< index f "name"
-      partial       <- readBoolean =<< index f "partial"
+      name          <- readString          =<< index f "name"
+      partial       <- readBoolean         =<< index f "partial"
       members       <- traverse readMember =<< readArray =<< index f "members"
       inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
       pure $ DictionaryNode { name, partial, members, inheritance }
     "exception" -> do
-      name          <- readString =<< index f "name"
+      name          <- readString          =<< index f "name"
       members       <- traverse readMember =<< readArray =<< index f "members"
       inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
       pure $ ExceptionNode { name, members, inheritance }
     "enum" -> do
-      name          <- readString =<< index f "name"
+      name          <- readString          =<< index f "name"
       values        <- traverse readString =<< readArray =<< index f "values"
       pure $ EnumNode { name, values }
     _ -> pure $ OtherNode _type
