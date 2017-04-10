@@ -15,9 +15,14 @@ data Type
 
 ##### Instances
 ``` purescript
-IsForeign Type
-Generic Type
+Generic Type _
 Show Type
+```
+
+#### `readType`
+
+``` purescript
+readType :: Foreign -> F Type
 ```
 
 #### `Argument`
@@ -29,9 +34,14 @@ newtype Argument
 
 ##### Instances
 ``` purescript
-IsForeign Argument
-Generic Argument
+Generic Argument _
 Show Argument
+```
+
+#### `readArgument`
+
+``` purescript
+readArgument :: Foreign -> F Argument
 ```
 
 #### `Member`
@@ -47,9 +57,14 @@ data Member
 
 ##### Instances
 ``` purescript
-Generic Member
+Generic Member _
 Show Member
-IsForeign Member
+```
+
+#### `readMember`
+
+``` purescript
+readMember :: Foreign -> F Member
 ```
 
 #### `Node`
@@ -70,15 +85,20 @@ A node represented as a PureScript data type.
 
 ##### Instances
 ``` purescript
-Generic Node
+Generic Node _
 Show Node
-IsForeign Node
+```
+
+#### `readNode`
+
+``` purescript
+readNode :: Foreign -> F Node
 ```
 
 #### `parse`
 
 ``` purescript
-parse :: forall eff. String -> Eff (err :: EXCEPTION | eff) (Array Node)
+parse :: String -> Either (Either Error (NonEmptyList ForeignError)) (Array Node)
 ```
 
 Parse a WebIDL string.
