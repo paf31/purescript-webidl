@@ -4,14 +4,13 @@
     "clean": "rimraf output && rimraf .pulp-cache",
     "build": "pulp build && pulp test"
   },
-  "peerDependencies": {
-    "webidl2": "git@github.com:darobin/webidl2.js.git#bd216bcd5596d6073"
-  },
   "devDependencies": {
     "pulp": "^11.0.0",
     "purescript-psa": "^0.5.0",
     "purescript": "^0.11.1",
-    "rimraf": "^2.5.4",
-    "webidl2": "git@github.com:darobin/webidl2.js.git#bd216bcd5596d6073"
+    "rimraf": "^2.5.4"
+  },
+  "dependencies": {
+    "webidl2": "^2.3.0"
   }
 }
