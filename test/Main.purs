@@ -1,16 +1,22 @@
 module Test.Main where
 
 import Prelude
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, logShow)
+import Effect (Effect)
+import Effect.Console (logShow)
 import WebIDL (parse)
 
-idl :: String
-idl = """
+interface :: String
+interface = """
+  interface Foo {
+  };
+  """
+
+interfaceOperation :: String
+interfaceOperation = """
   interface Foo : Bar {
     object baz(string bam);
   };
   """
 
-main :: Eff (console :: CONSOLE) Unit
-main = logShow (parse idl)
+main :: Effect Unit
+main = logShow (parse interface)
