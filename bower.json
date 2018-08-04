@@ -8,12 +8,12 @@
     "url": "git://github.com/paf31/purescript-webidl.git"
   },
   "dependencies": {
-    "purescript-exceptions": "^3.0.0",
-    "purescript-foreign": "^4.0.0",
-    "purescript-generics-rep": "^5.0.0",
-    "purescript-maybe": "^3.0.0"
+    "purescript-exceptions": "^4.0.0",
+    "purescript-foreign": "^5.0.0",
+    "purescript-generics-rep": "^6.0.0",
+    "purescript-maybe": "^4.0.0"
   },
   "devDependencies": {
-    "purescript-console": "^3.0.0"
+    "purescript-console": "^4.0.0"
   }
 }
