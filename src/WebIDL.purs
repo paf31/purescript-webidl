@@ -14,16 +14,17 @@ module WebIDL
 
 import Prelude
 import Control.Alt ((<|>))
-import Control.Monad.Eff (Eff, runPure)
-import Control.Monad.Eff.Exception (EXCEPTION, Error, message, try)
+import Effect (Effect)
+import Effect.Unsafe (unsafePerformEffect)
+import Effect.Exception (Error, try)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError, readArray, readBoolean, readInt, readNullOrUndefined, readString, renderForeignError)
-import Data.Foreign.Index (index)
+import Foreign (F, Foreign, ForeignError, readArray, readBoolean, readInt, readNullOrUndefined, readString)
+import Foreign.Index (index)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.List.NonEmpty (NonEmptyList, singleton)
+import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe)
 import Data.Traversable (traverse)
 
@@ -231,13 +232,13 @@ readNode f = do
       pure $ EnumNode { name, values }
     _ -> pure $ OtherNode _type
 
-foreign import parseImpl :: forall eff. String -> Eff (exception :: EXCEPTION | eff) (Array Foreign)
+foreign import parseImpl :: String -> Effect (Array Foreign)
 
 -- | Parse a WebIDL string.
 parse :: String -> Either (Either Error (NonEmptyList ForeignError)) (Array Node)
 parse =
   parseImpl
   >>> try
-  >>> runPure
+  >>> unsafePerformEffect
   >>> lmap Left
   >=> traverse (lmap Right <<< runExcept <<< readNode)
