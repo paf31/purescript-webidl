@@ -2,7 +2,18 @@
 
 module WebIDL
   ( Node(..)
+  , RecNodeInterface
+  , RecNodeImplements
+  , RecNodeTypeDef
+  , RecNodeCallback
+  , RecNodeDictionary
+  , RecNodeException
+  , RecNodeEnum
   , Member(..)
+  , RecMemberOperation
+  , RecMemberAttribute
+  , RecMemberConstant
+  , RecMemberField
   , Type(..)
   , Argument(..)
   , parse
@@ -75,8 +86,7 @@ derive instance genericArgument :: Generic Argument _
 instance showArgument :: Show Argument where
   show x = genericShow x
 
-data Member
-  = OperationMember
+type RecMemberOperation =
     { name            :: Maybe String
     , arguments       :: Array Argument
     , getter          :: Boolean
@@ -88,7 +98,8 @@ data Member
     , stringifier     :: Boolean
     , idlType         :: Type
     }
-  | AttributeMember
+
+type RecMemberAttribute =
     { name            :: String
     , inherit         :: Boolean
     , static          :: Boolean
@@ -96,16 +107,24 @@ data Member
     , readonly        :: Boolean
     , idlType         :: Type
     }
-  | ConstantMember
+
+type RecMemberConstant =
     { name            :: String
     , idlType         :: String
     , nullable        :: Boolean
     }
-  | FieldMember
+
+type RecMemberField =
     { name            :: String
     , required        :: Boolean
     , idlType         :: Type
     }
+
+data Member
+  = OperationMember RecMemberOperation
+  | AttributeMember RecMemberAttribute
+  | ConstantMember RecMemberConstant
+  | FieldMember RecMemberField
   | OtherMember String
 
 derive instance genericMember :: Generic Member _
@@ -150,41 +169,56 @@ readMember f = do
     _ -> pure $ OtherMember _type
 
 -- | A node represented as a PureScript data type.
+
+type RecNodeInterface =
+  { name            :: String
+  , partial         :: Boolean
+  , members         :: Array Member
+  , inheritance     :: Maybe String
+  }
+
+type RecNodeImplements =
+  { target          :: String
+  , implements      :: String
+  }
+
+type RecNodeTypeDef =
+  { name            :: String
+  , idlType         :: Type
+  }
+
+type RecNodeCallback =
+  { name            :: String
+  , idlType         :: Type
+  , arguments       :: Array Argument
+  }
+
+type RecNodeDictionary =
+  { name            :: String
+  , partial         :: Boolean
+  , members         :: Array Member
+  , inheritance     :: Maybe String
+  }
+
+type RecNodeException =
+  { name            :: String
+  , members         :: Array Member
+  , inheritance     :: Maybe String
+  }
+
+type RecNodeEnum =
+  { name            :: String
+  , values          :: Array String
+  }
+
 data Node
-  = InterfaceNode
-    { name            :: String
-    , partial         :: Boolean
-    , members         :: Array Member
-    , inheritance     :: Maybe String
-    }
-  | ImplementsNode
-    { target          :: String
-    , implements      :: String
-    }
-  | TypeDefNode
-    { name            :: String
-    , idlType         :: Type
-    }
-  | CallbackNode
-    { name            :: String
-    , idlType         :: Type
-    , arguments       :: Array Argument
-    }
-  | DictionaryNode
-    { name            :: String
-    , partial         :: Boolean
-    , members         :: Array Member
-    , inheritance     :: Maybe String
-    }
-  | ExceptionNode
-    { name            :: String
-    , members         :: Array Member
-    , inheritance     :: Maybe String
-    }
-  | EnumNode
-    { name            :: String
-    , values          :: Array String
-    }
+  = InterfaceNode RecNodeInterface
+  | ImplementsNode RecNodeImplements
+  | TypeDefNode RecNodeTypeDef
+  | CallbackNode RecNodeCallback
+  | DictionaryNode RecNodeDictionary
+  | ExceptionNode RecNodeException
+  | EnumNode RecNodeEnum
   | OtherNode String
 
 derive instance genericNode :: Generic Node _
