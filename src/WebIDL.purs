@@ -87,38 +87,38 @@ instance showArgument :: Show Argument where
   show x = genericShow x
 
 type RecMemberOperation =
-    { name            :: Maybe String
-    , arguments       :: Array Argument
-    , getter          :: Boolean
-    , setter          :: Boolean
-    , creator         :: Boolean
-    , deleter         :: Boolean
-    , legacycaller    :: Boolean
-    , static          :: Boolean
-    , stringifier     :: Boolean
-    , idlType         :: Type
-    }
+  { name            :: Maybe String
+  , arguments       :: Array Argument
+  , getter          :: Boolean
+  , setter          :: Boolean
+  , creator         :: Boolean
+  , deleter         :: Boolean
+  , legacycaller    :: Boolean
+  , static          :: Boolean
+  , stringifier     :: Boolean
+  , idlType         :: Type
+  }
 
 type RecMemberAttribute =
-    { name            :: String
-    , inherit         :: Boolean
-    , static          :: Boolean
-    , stringifier     :: Boolean
-    , readonly        :: Boolean
-    , idlType         :: Type
-    }
+  { name            :: String
+  , inherit         :: Boolean
+  , static          :: Boolean
+  , stringifier     :: Boolean
+  , readonly        :: Boolean
+  , idlType         :: Type
+  }
 
 type RecMemberConstant =
-    { name            :: String
-    , idlType         :: String
-    , nullable        :: Boolean
-    }
+  { name            :: String
+  , idlType         :: String
+  , nullable        :: Boolean
+  }
 
 type RecMemberField =
-    { name            :: String
-    , required        :: Boolean
-    , idlType         :: Type
-    }
+  { name            :: String
+  , required        :: Boolean
+  , idlType         :: Type
+  }
 
 data Member
   = OperationMember RecMemberOperation
