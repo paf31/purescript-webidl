@@ -15,11 +15,9 @@ module WebIDL
   , RecMemberConstant
   , RecMemberField
   , Type(..)
+  , RecArgument
   , Argument(..)
   , parse
-  , readType
-  , readArgument
-  , readMember
   , readNode
   ) where
 
@@ -31,13 +29,15 @@ import Effect.Exception (Error, try)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Foreign (F, Foreign, ForeignError, readArray, readBoolean, readInt, readNullOrUndefined, readString)
+import Foreign (F, Foreign, ForeignError, readBoolean, readString)
 import Foreign.Index (index)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe)
 import Data.Traversable (traverse)
+import Simple.JSON as JSON
+import Data.Newtype (class Newtype, wrap)
 
 data Type
   = UnionType { unifies :: Array Type }
@@ -46,45 +46,38 @@ data Type
   | GenericType { family :: String, typeArgument :: Type }
   | NullableType Type
 
-readType :: Foreign -> F Type
-readType f = do
-  nullable <- readBoolean =<< index f "nullable"
-  ty <- do family <- readString =<< index f "generic"
-           typeArgument <- readType =<< index f "idlType"
-           pure $ GenericType { family, typeArgument }
-    <|> do nesting <- readInt =<< index f "array"
-           elementType <- readString =<< index f "idlType"
-           pure $ ArrayType { nesting, elementType }
-    <|> do unifies <- traverse readType =<< readArray =<< index f "idlType"
-           pure $ UnionType { unifies }
-    <|> do typeName <- readString =<< index f "idlType"
-           pure $ NamedType { typeName }
-  pure $ if nullable then NullableType ty else ty
-
 derive instance genericType :: Generic Type _
 
 instance showType :: Show Type where
   show x = genericShow x
 
-newtype Argument = Argument
+instance readForeignType :: JSON.ReadForeign Type where
+  readImpl f = do
+    nullable <- readBoolean =<< index f "nullable"
+    ty <- GenericType <$> JSON.read' f
+      <|> ArrayType <$> JSON.read' f
+      <|> UnionType <$> JSON.read' f
+      <|> NamedType <$> JSON.read' f
+    pure $ if nullable then NullableType ty else ty
+
+
+type RecArgument =
   { name           :: String
   , idlType        :: Type
   , optional       :: Boolean
   , variadic       :: Boolean
   }
 
-readArgument :: Foreign -> F Argument
-readArgument f = do
-  name          <- readString  =<< index f "name"
-  idlType       <- readType    =<< index f "idlType"
-  optional      <- readBoolean =<< index f "optional"
-  variadic      <- readBoolean =<< index f "variadic"
-  pure $ Argument { name, idlType, optional, variadic }
+newtype Argument = Argument RecArgument
+derive instance newtypeArgument :: Newtype Argument _
 
 derive instance genericArgument :: Generic Argument _
 
 instance showArgument :: Show Argument where
   show x = genericShow x
+
+instance readForeignArgument :: JSON.ReadForeign Argument where
+  readImpl = map wrap <<< JSON.read'
 
 type RecMemberOperation =
   { name            :: Maybe String
@@ -132,41 +125,15 @@ derive instance genericMember :: Generic Member _
 instance showMember :: Show Member where
   show x = genericShow x
 
-readMember :: Foreign -> F Member
-readMember f = do
-  _type <- readString =<< index f "type"
-  case _type of
-    "operation" -> do
-      name          <- traverse readString   =<< readNullOrUndefined =<< index f "name"
-      arguments     <- traverse readArgument =<< readArray =<< index f "arguments"
-      idlType       <- readType              =<< index f "idlType"
-      getter        <- readBoolean           =<< index f "getter"
-      setter        <- readBoolean           =<< index f "setter"
-      creator       <- readBoolean           =<< index f "creator"
-      deleter       <- readBoolean           =<< index f "deleter"
-      legacycaller  <- readBoolean           =<< index f "legacycaller"
-      static        <- readBoolean           =<< index f "static"
-      stringifier   <- readBoolean           =<< index f "stringifier"
-      pure $ OperationMember { name, arguments, idlType, getter, setter, creator, deleter, legacycaller, static, stringifier }
-    "const" -> do
-      name          <- readString  =<< index f "name"
-      idlType       <- readString  =<< index f "idlType"
-      nullable      <- readBoolean =<< index f "nullable"
-      pure $ ConstantMember { name, idlType, nullable }
-    "attribute" -> do
-      name          <- readString  =<< index f "name"
-      inherit       <- readBoolean =<< index f "inherit"
-      static        <- readBoolean =<< index f "static"
-      stringifier   <- readBoolean =<< index f "stringifier"
-      readonly      <- readBoolean =<< index f "readonly"
-      idlType       <- readType    =<< index f "idlType"
-      pure $ AttributeMember { name, inherit, static, stringifier, readonly, idlType }
-    "field" -> do
-      name          <- readString  =<< index f "name"
-      idlType       <- readType    =<< index f "idlType"
-      required      <- readBoolean =<< index f "required"
-      pure $ FieldMember { name, idlType, required }
-    _ -> pure $ OtherMember _type
+instance readForeignMember :: JSON.ReadForeign Member where
+  readImpl f = do
+    _type <- readString =<< index f "type"
+    case _type of
+      "operation" -> OperationMember <$> JSON.read' f
+      "const" -> ConstantMember <$> JSON.read' f
+      "attribute" -> AttributeMember <$> JSON.read' f
+      "field" -> FieldMember <$> JSON.read' f
+      _ -> pure $ OtherMember _type
 
 -- | A node represented as a PureScript data type.
 
@@ -226,44 +193,20 @@ derive instance genericNode :: Generic Node _
 instance showNode :: Show Node where
   show x = genericShow x
 
+instance readForeignNode :: JSON.ReadForeign Node where
+  readImpl f = readNode f
+
 readNode :: Foreign -> F Node
 readNode f = do
   _type <- readString =<< index f "type"
   case _type of
-    "interface" -> do
-      name          <- readString          =<< index f "name"
-      partial       <- readBoolean         =<< index f "partial"
-      members       <- traverse readMember =<< readArray =<< index f "members"
-      inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
-      pure $ InterfaceNode { name, partial, members, inheritance }
-    "implements" -> do
-      target        <- readString =<< index f "target"
-      implements    <- readString =<< index f "implements"
-      pure $ ImplementsNode { target, implements }
-    "typedef" -> do
-      name          <- readString =<< index f "name"
-      idlType       <- readType   =<< index f "idlType"
-      pure $ TypeDefNode { name, idlType }
-    "callback" -> do
-      name          <- readString            =<< index f "name"
-      idlType       <- readType              =<< index f "idlType"
-      arguments     <- traverse readArgument =<< readArray =<< index f "arguments"
-      pure $ CallbackNode { name, idlType, arguments }
-    "dictionary" -> do
-      name          <- readString          =<< index f "name"
-      partial       <- readBoolean         =<< index f "partial"
-      members       <- traverse readMember =<< readArray =<< index f "members"
-      inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
-      pure $ DictionaryNode { name, partial, members, inheritance }
-    "exception" -> do
-      name          <- readString          =<< index f "name"
-      members       <- traverse readMember =<< readArray =<< index f "members"
-      inheritance   <- traverse readString =<< readNullOrUndefined =<< index f "inheritance"
-      pure $ ExceptionNode { name, members, inheritance }
-    "enum" -> do
-      name          <- readString          =<< index f "name"
-      values        <- traverse readString =<< readArray =<< index f "values"
-      pure $ EnumNode { name, values }
+    "interface" -> InterfaceNode <$> JSON.read' f
+    "implements" -> ImplementsNode <$> JSON.read' f
+    "typedef" -> TypeDefNode <$> JSON.read' f
+    "callback" -> CallbackNode <$> JSON.read' f
+    "dictionary" -> DictionaryNode <$> JSON.read' f
+    "exception" -> ExceptionNode <$> JSON.read' f
+    "enum" -> EnumNode <$> JSON.read' f
     _ -> pure $ OtherNode _type
 
 foreign import parseImpl :: String -> Effect (Array Foreign)
