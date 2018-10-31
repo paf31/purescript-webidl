@@ -98,7 +98,7 @@ data Member
     }
   | ConstantMember
     { name            :: String
-    , idlType         :: String
+    , idlType         :: Type
     , nullable        :: Boolean
     }
   | FieldMember
